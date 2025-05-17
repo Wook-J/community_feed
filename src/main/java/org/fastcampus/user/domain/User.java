@@ -5,12 +5,12 @@ import org.fastcampus.common.domain.PositiveIntegerCounter;
 
 public class User {
 
-    private final long id;
+    private final Long id;
     private final UserInfo info;
     private final PositiveIntegerCounter followingCount;
     private final PositiveIntegerCounter followerCounter;
 
-    public User(long id, UserInfo userInfo) {   // 단축키 alt + Insert
+    public User(Long id, UserInfo userInfo) {   // 단축키 alt + Insert
         if(userInfo == null){
             throw new IllegalArgumentException("userInfo is null");
         }
@@ -68,7 +68,7 @@ public class User {
         return Objects.hashCode(id);
     }
 
-    public long getId() {
+    public Long getId() {
         return id;
     }
 
@@ -78,5 +78,9 @@ public class User {
 
     public int followingCount(){
         return followingCount.getCount();
+    }
+
+    public UserInfo getInfo() {
+        return info;
     }
 }
