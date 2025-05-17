@@ -3,8 +3,8 @@ package org.fastcampus.post.domain.content;
 import org.fastcampus.post.domain.common.DatetimeInfo;
 
 public abstract class Content {
-    String contentText;
-    final DatetimeInfo datetimeInfo;
+    protected String contentText;
+    protected final DatetimeInfo datetimeInfo;
 
     // 상속받게 된다면 checkText만 재활용해주면 Content에서 text 검증 가능!
     protected Content(String contentText) {
