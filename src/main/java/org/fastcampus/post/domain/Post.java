@@ -65,4 +65,16 @@ public class Post {
     public String getContent() {
         return content.getContentText();
     }
+
+    public Long getId() {
+        return id;
+    }
+
+    public User getAuthor() {
+        return author;
+    }
+
+    public Content getContentObject() {
+        return content;
+    }
 }
