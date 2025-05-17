@@ -5,6 +5,7 @@ import org.fastcampus.user.application.dto.CreateUserRequestDto;
 import org.fastcampus.user.application.interfaces.UserRepository;
 import org.fastcampus.user.domain.User;
 import org.fastcampus.user.domain.UserInfo;
+import org.springframework.stereotype.Service;
 
 /*
  * 비즈니스 로직을 처리한다기 보다는 다른 객체와 협업을 하는 역할을 주로 함
@@ -16,6 +17,7 @@ import org.fastcampus.user.domain.UserInfo;
 // 이후 dto 객체 만듦
 // -> 이 역시 프로젝트마다 클래스 명명할 때 네이밍규칙을 만들면 편함
 // 행동, 변경이나 생성할 객체의 이름, 요청이 req인지 resp인지, dto 객체
+@Service
 public class UserService {
 
     private final UserRepository userRepository;
