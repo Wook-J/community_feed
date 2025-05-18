@@ -3,7 +3,9 @@ package org.fastcampus.user.application;
 import org.fastcampus.user.application.dto.FollowUserRequestDto;
 import org.fastcampus.user.application.interfaces.UserRelationRepository;
 import org.fastcampus.user.domain.User;
+import org.springframework.stereotype.Service;
 
+@Service
 public class UserRelationService {
     private final UserService userService;
     private final UserRelationRepository userRelationRepository;
@@ -33,6 +35,7 @@ public class UserRelationService {
             throw new IllegalArgumentException();
         }
 
+        // unfollow 하면서 값을 줄여줬으므로, 값을 저장만 하는 식으로 로직 구성함
         user.unfollow(targetUser);
         userRelationRepository.delete(user, targetUser);
     }

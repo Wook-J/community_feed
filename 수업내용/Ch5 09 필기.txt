@@ -1,0 +1,87 @@
+user 패키지에 유저와 직접적으로 만나는 ui 패키지 생성 후
+하위에 UserController.java 생성
+
+1. 유저생성 추가!
+- 이전에 응답값을 통일시켜서 반환해주면 좋겠지..?
+- (팀마다 다름) 정해져 있는 응답 인터페이스 형태를 맞춰주면 좋으므로 미리 작성을 해주고 가자..!
+--> common.ui 하위에 Response.java 생성(record 타입)
+
+한번도 안본 코드 나옴..! (맨 아래 참고)
+
+Exception별로 손쉽게 핸들링 할 수 있도록 GlobalExceptionHandler 추가
+- 같은 형태의 Response가 내려갈 수 있도록!
+- 그전에 에러를 정의한 에러코드 enum도 추가해서 같이 내려줄 수 있도록!
+--> common.domain 하위에 exception 코드정의를 위한 package 생성
+
+
+GlobalExceptionHandler.java 내 코드
+    @ExceptionHandler(IllegalArgumentException.class)
+    public Response<Void> handleIllegalArgumentException(IllegalArgumentException exception) {
+        return Response.error(ErrorCode.INVALID_INPUT_VALUE);
+    }
+- IllegalArgumentException이 발생했을 때의 응답을 처리
+-> 자동으로 code와 메세지가 들어간 Response 타입이 반환됨
+
+Postman 사용법. 그냥 다운받고 로그인 안하고 사용하면 됨
+주의사항
+- Body raw 클릭 및 그 줄 오른쪽 끝에 "JSON"으로 바뀌었는지 확인!
+- 응답보려면 서버 켜져있어야함
+
+Dbeaver 가서 확인해보기
+Postman에서 Post요청 보내면 table에 데이터 들어가있음!
+
+org.fastcampus.user.ui.UserRelationController 추가
+follow 확인 -> org.fastcampus.user.repository.UserRelationRepositoryImpl 추가
+jpa로도 기본적인 쿼리 메서드 사용가능함 -> org.fastcampus.user.repository.jpa.JpaUserRelationRepository 추가
+
+org.fastcampus.user.repository.entity.UserEntity 내부
+@DynamicUpdate : 변경된 값들만 업데이트 해주는식으로 쿼리문 작성해줌!
+
+-------------------------------------------------------------------------------------------------------
+
+조회기능 구현하기전에 질문!
+- 조회와 생성/변경을 위한 인터페이스는 분리하면 유연하게 쓸 수 있음
+- 기존에는 무조건 컨트롤러에 DI해야 했던 것들을 실습할때 만들었던
+JpaUserListQueryRepository를 Controller에 바로 주입시키면 어떻게 될까???
+
+Service단을 거치지 않고도 바로 Controller에서 처리 가능!
++ 저수준 컴포넌트가 저수준 컴포넌트를 의존했으므로 크게 문제가 되지도 않음
++ 단, 이런 레파지토리 같은 경우에는 조회만 하도록 만든 쿼리 레파지토리이다!
++ 라고 컨벤션 정하면 좋음(불필요한 쿼리 작성없이도 쉽고 빠르게 기능 구현 가능)
+
+
+@GetMapping("/{userId}")
+    public Response<GetUserResponseDto> getUserProfile(@PathVariable(name = "userId") Long userId) {
+        return Response.ok(userService.getUserProfile(userId));
+    }
+조회만 하는 기능이지만 userSerivce를 넣어서 반환하는 메서드를 작성해 봄!
+- 곧바로 userListQueryRepository를 사용하더라도 어떤게 정답이라고 할 수는 없다!
+- 다만 비즈니스 로직에 따라 데이터 변경이나 값이 추가되야 한다면 Service Layer를 거쳐서 반환하는 것도 방법이 될 수 있다!
+
+-------------------------------------------------------------------------------------------------------
+    public static <T> Response<T> ok(T value){
+       return new Response<>(0, "ok", value);
+    }
+
+📌 1. 메서드 정의 부분 해석
+🔸 public static
+public: 외부 클래스 어디서든 호출 가능
+
+static: 인스턴스를 생성하지 않고도 Response.ok(...) 형태로 호출 가능
+
+🔸 <T>
+제네릭 타입 매개변수 정의
+
+메서드에서 사용하는 타입을 호출 시점에 유동적으로 지정할 수 있게 함
+
+📌 2. 매개변수: T value
+클라이언트에게 전달할 실제 응답 데이터입니다.
+
+타입 T는 위에서 지정한 제네릭 타입
+
+📌 3. 반환값: Response<T>
+record Response<T>(Integer code, String message, T value) 생성자를 이용하여 새 객체 생성
+
+이 메서드는 다음과 같은 응답 객체를 생성합니다:
+new Response<>(0, "ok", value);
+-------------------------------------------------------------------------------------------------------
