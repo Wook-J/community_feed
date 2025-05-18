@@ -28,6 +28,9 @@ public class UserEntity extends TimeBaseEntity {
     private Integer followerCount;
     private Integer followingCount;
 
+//    @OneToMany        // 작성한 posts가 아주 많을 때 시스템 에러가 발생할 가능성 높아서 잘 안씀!
+//    private List<PostEntity> posts;   // -> 레파지토리를 이용해서 데이터를 불러오는 게 보통임!
+
     public UserEntity(User user) {
         this.id = user.getId();
         this.name = user.getName();

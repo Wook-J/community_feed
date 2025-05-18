@@ -1,0 +1,66 @@
+Post, Comment, Like 엔티티 객체 생성
+
+기존에는 다른 객체들과 연관성이 따로 없던 User객체였음..!
+-> Post객체는 작가, 유저 객체를 참조해야하는 문제가 발생!
+
+ORM에서 배웠던거 복습 : 테이블과 객체는 연관관계 아예 다름!
+- 테이블 : 한 쪽에만 상대방이 정보를 갖고 있어도 서로 참조 가능
+- 객체 : 한 쪽에만 상대방이 정보를 갖고 있어도 참조 불가능
+  -> 테이블과 다르게 양방향 매핑을 따로 하거나 아니면 단방향만 조회하는 방법으로 매핑해야함!
+
+유저 - 유저 1명이 포스트 여러 개 쓸 수 있음
+포스트 - 포스트 여러개가 유저 1명에 의해 써질 수 있음
+UserEntity : @OneToMany private List<PostEntity> posts;
+PostEntity : @ManyToOne @JoinColumn(name = "author_id") private UserEntity author;
+
+Postentity.java
+    @ManyToOne
+    @JoinColumn(name = "author_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    private UserEntity author;
+-> 실무에서는 foreignKey를 많이 사용하지는 않음
+-> 데이터 연관관계를 강제하긴 하지만 인덱스를 걸기도 하고 제약조건 때문에 수정이 어려워짐
+
+Post.java : 상태값으로 enum(private PostPublicationState state)이 있음
+-> String 값과 enum 객체로 변경을 쉽게 해주는 @Convert 추가
+
+org.fastcampus.post.repository.entityPostPublicationStateConverter 생성
+PostEntity.java 에 @Convert의 소괄호 내 converter 에 PostPublicationStateConverter.class 추가 시
+자동으로 conver 데이터가 저장이 될 때 converter를 통해 데이터를 변환하고, 불러올 때는 state를 반환함
+
+LikeEntity.java
+@EmbeddedId
+- Java Persistence API(JPA)에서 **복합 키(Composite Primary Key)**를 정의할 때 사용하는 어노테이션
+- 즉, 두 개 이상의 컬럼을 조합하여 기본 키로 사용할 때 사용하는 방식
+
+@Table(name="community_like")
+- like는 예약어라서 테이블이 정상적으로 생성되지 않을 수 있음 -> "community_"를 앞 부분에 추가해서 해결!
+-----------------------------------------------------------------------------------------------
+Hibernate: 
+    create table community_comment (
+        id bigint not null auto_increment,
+        mod_dt datetime(6),
+        reg_dt datetime(6),
+        content varchar(255),
+        like_counter integer,
+        author_id bigint,
+        post_id bigint,
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    create table community_like (
+        target_id bigint not null,
+        target_type varchar(255) not null,
+        user_id bigint not null,
+        primary key (target_id, target_type, user_id)
+    ) engine=InnoDB
+Hibernate: 
+    create table community_post (
+        id bigint not null auto_increment,
+        mod_dt datetime(6),
+        reg_dt datetime(6),
+        content varchar(255),
+        like_count integer,
+        state varchar(255),
+        author_id bigint,
+        primary key (id)
+    ) engine=InnoDB
