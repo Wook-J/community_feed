@@ -69,8 +69,23 @@ Product Configuration 화면 진입 - Next 클릭
 잘 되면 exit 입력하여 나가기!
 
 설치 완료 후 build.gradle.kts 다시 들어가기
+lomnok의 경우 IntelliJ 의 Setting 에서 플러그 인에서 Lombok 검색해서 설치하면됨
 
+mysql과 community_feed 와 연동을 위한 세팅 추가
 
+application.yml 내 코드
+open-in-view: false
+- Database Connection Pool
+(DB로 데이터를 연결하기 위한 스레드가 미리 있어야함)
+(즉, 어플리케이션과 DB에서 데이터를 요청하기 위한 연결이 필요함)
+(매번 요청떄마다 요청을 하는걸 만들고 스레드 생성하고 요청하고... 비용이 많이 듬)
+(-> 스프링에서는 DB와 어플리케이션 연결을 위한 스레드를 미리 만들어둠)
+
+cmd 창에서 mysql -u root -p 입력 후 엔터
+비밀번호 입력후 mysql 진입
+CREATE DATABASE community_feed 입력 후 엔터
+; 입력 후 엔터
+use community_feed 입력 후 엔터(-> Database changed)
 ---------------------------------------------------------------------------------------------------------
 윈도우에서 MySQL 서비스 수동 시작/중지하는 방법
 

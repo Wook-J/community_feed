@@ -1,0 +1,73 @@
+db 저장을 위한 엔티티 만들예정
+table 2개 만들 예정
+- 유저에 대한 정보가 들어가 있는 table
+- 유저의 follow-following 관계가 나타나있는 table
+
+유저 테이블
+- 유저 id, 이름, 프로필, 팔로잉숫자, 팔로우숫자, 팔로우-팔로잉리스트, 등록일시, 수정일시
+
+
+엔티티 객체와 기존 도메인 객체를 함께 사용할지? 아니면 따로 엔티티 객체를 만들어야할지?
+-----------------------------------------------------------------------------------------------
+엔티티가 영속성 상태가 되기 위해서는 반드시 id 값이 필요함
+-> @Id 사용
+@GeneratedValue(strategy = GenerationType.IDENTITY)
+-> @Id 와 함께 사용되어 엔티티의 기본 키 값을 자동으로 생성할 때 어떤 전략으로 생성할지를 설정
+-----------------------------------------------------------------------------------------------
+
+엔티티 객체를 따로 유저엔티티로 분리하게 되면 관리할 객체들이 늘어나는 단점이 있음!
+그러나 DB와 비즈니스로직의 완전한 분리!!!!
+- 이렇게 분리하면 단순 매핑만 하는 객체(ex UserEntity)만 변경하는 경우 DB가 변경이 되도 크게 문제가 없음!
+-> 유연함이라는 엄청난 이점이 생김!!
+
+- 분리를 안하게 되면 도메인 객체에 비즈니스로직에 전혀 상관 없는 것이 들어감
+- 즉 도메인 패키지 내 클래스 자체도 같이 변경을 하게됨..!
+- RDBMS를 못쓰거나 API를 걷어낸다고 하면 기존의 도메인 객체들은 아예 쓸수가 없는 상황 발생..!
+-----------------------------------------------------------------------------------------------
+
+실무에서는 데이터가 언제 수정되었는지가 굉장히 중요함!
+- 대부분의 테이블에는 언제 들어가고, 언제 수정되었는지를 항상 체크하는 컬럼이 있음
+- 그런것들을 여러객체마다 만들어주는 것은 굉장히 피곤함!
+-> jpa에서 객체 상속을 통해서 이런 번거로움을 줄일 수 있음!
+
+common.repository.entity에 TimeBaseEntity.java 생성
+-> UserEntity.java에 상속(자동으로 TimeBaseEntity.java 안의 필드를 컬럼으로 추가해줌)
+
+AuditingEntityListener.class를 사용하기 위해서는
+Application.java에 @EnableJpaAuditing 필요!
+
+@MappedSupperclass
+- 공통 매핑정보가 필요할 때에 속성만 상속받아서 사용할 수 있게 만들어주는 어노테이션
+
+UserRelationEntity.java 생성
+- 얘는 user domain 객체에 존재하지 않음
+- 두 user의 id를 조합해서 관계를 만듦!
+- 이 조합은 unique 함 -> 두 id 조합해서 pk로 만들면 되겠군!
+
+MySQL에서 pk : 테이블당 반드시 1개씩 존재해야 하는 unique한 식별자
+- pk를 이용하면 빠르게 조회 가능! -> 기본적으로 clustered index가 적용되어 있음
+
+여러 컬럼을 조합해서 pk를 만드는 방식
+- id 엔티티를 객체로 만들고, 컬럼으로 상속받는 방식
+
+여기까지 하면 Hibernate를 이용해서 table이 생성된 걸 확인할 수 있음
+-----------------------------------------------------------------------------------------------
+Hibernate: 
+    create table community_user (
+        id bigint not null auto_increment,
+        mod_dt datetime(6),
+        reg_dt datetime(6),
+        follower_count integer,
+        following_count integer,
+        name varchar(255),
+        profile_image varchar(255),
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    create table community_user_relation (
+        follower_user_id bigint not null,
+        following_user_id bigint not null,
+        mod_dt datetime(6),
+        reg_dt datetime(6),
+        primary key (follower_user_id, following_user_id)
+    ) engine=InnoDB

@@ -1,14 +1,20 @@
 package org.fastcampus.user.domain;
 
 import java.util.Objects;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
 import org.fastcampus.common.domain.PositiveIntegerCounter;
 
+@Getter
+@Builder
+@AllArgsConstructor
 public class User {
 
-    private final Long id;
-    private final UserInfo info;
-    private final PositiveIntegerCounter followingCount;
-    private final PositiveIntegerCounter followerCounter;
+    private Long id;
+    private UserInfo info;
+    private PositiveIntegerCounter followingCount;
+    private PositiveIntegerCounter followerCounter;
 
     public User(Long id, UserInfo userInfo) {   // 단축키 alt + Insert
         if(userInfo == null){
@@ -68,10 +74,6 @@ public class User {
         return Objects.hashCode(id);
     }
 
-    public Long getId() {
-        return id;
-    }
-
     public int followerCount(){
         return followerCounter.getCount();
     }
@@ -80,7 +82,11 @@ public class User {
         return followingCount.getCount();
     }
 
-    public UserInfo getInfo() {
-        return info;
+    public String getProfileImage(){
+        return info.getProfileImageUrl();
+    }
+
+    public String getName(){
+        return info.getName();
     }
 }
