@@ -3,7 +3,9 @@ package org.fastcampus.post.application;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.fastcampus.post.application.dto.LikeRequestDto;
+import org.fastcampus.post.application.dto.UpdatePostRequestDto;
 import org.fastcampus.post.domain.Post;
+import org.fastcampus.post.domain.content.PostPublicationState;
 import org.junit.jupiter.api.Test;
 
 class PostServiceTest extends PostApplicationTestTemplate {
@@ -33,7 +35,8 @@ class PostServiceTest extends PostApplicationTestTemplate {
         Post savePost = postService.createPost(postRequestDto);
 
         // when
-        Post updatedPost = postService.updatePost(savePost.getId(), postRequestDto);
+        UpdatePostRequestDto updateDto = new UpdatePostRequestDto(user.getId(), "updated-content", PostPublicationState.PRIVATE);
+        Post updatedPost = postService.updatePost(savePost.getId(), updateDto);
 
         // then
         assertEquals(savePost.getId(), updatedPost.getId());
@@ -76,7 +79,7 @@ class PostServiceTest extends PostApplicationTestTemplate {
         postService.likePost(likeRequestDto);
 
         // when
-        postService.unLikePost(likeRequestDto);
+        postService.unlikePost(likeRequestDto);
 
         // then
         assertEquals(0, savePost.getLikeCount());
@@ -89,7 +92,7 @@ class PostServiceTest extends PostApplicationTestTemplate {
 
         // when
         LikeRequestDto likeRequestDto = new LikeRequestDto(savePost.getId(), otherUser.getId());
-        postService.unLikePost(likeRequestDto);
+        postService.unlikePost(likeRequestDto);
 
         // then
         assertEquals(0, savePost.getLikeCount());

@@ -1,0 +1,294 @@
+조회를 제외한 커뮤니티 기본 기능들 구현
+- 주로 spring data jpa 에서 제공하는 쿼리 메서드 기능을 이용할 예정
+- Post, Comment 기능들은 주로 CUD 기능임
+-> spring data jpq 쿼리 메서드와 JPQL을 이용하면 쉽게 구현가능할 듯!
+
+
+PostService.updatePost()부분을 살펴보자
+- 영속성 컨텍스트에 PostEntity가 등록되어 있지 않음
+- 순수 엔티티 객체로 getPost를 통해 반환이 되고
+- 위에서 반환되었던 PostEntity는 사실상 사용하고 있지 않은상황이었음!
+- 동일한 SerivceLayer에서 findById 메서드에 있는 PostEntity를 사용해야지 영속성컨텍스트로 등록이 됨
+- 그러나 로직을 위해서 Post객체를 추가해주는 바람에 1번더 조회를 한 후에 영속성 컨텍스트에 등록됨...ㅠㅠ
+
+----------------------------------------------------------------------------------
+Postman에서 글 작성 시 console에서 나타나는 쿼리문
+
+Hibernate: 
+    select
+        ue1_0.id,
+        ue1_0.follower_count,
+        ue1_0.following_count,
+        ue1_0.mod_dt,
+        ue1_0.name,
+        ue1_0.profile_image,
+        ue1_0.reg_dt 
+    from
+        community_user ue1_0 
+    where
+        ue1_0.id=?
+Hibernate: 
+    insert 
+    into
+        community_post
+        (author_id, content, like_count, mod_dt, reg_dt, state) 
+    values
+        (?, ?, ?, ?, ?, ?)
+
+
+Postman에서 글 수정 시 console에서 나타나는 쿼리문 (PostService에서 updatePost 메서드 흐름임)
+Hibernate:  1. Post 얻어오기
+    select
+        pe1_0.id,
+        pe1_0.author_id,
+        a1_0.id,
+        a1_0.follower_count,
+        a1_0.following_count,
+        a1_0.mod_dt,
+        a1_0.name,
+        a1_0.profile_image,
+        a1_0.reg_dt,
+        pe1_0.content,
+        pe1_0.like_count,
+        pe1_0.mod_dt,
+        pe1_0.reg_dt,
+        pe1_0.state 
+    from
+        community_post pe1_0 
+    left join
+        community_user a1_0 
+            on a1_0.id=pe1_0.author_id 
+    where
+        pe1_0.id=?
+Hibernate:  2. User 얻어오기
+    select
+        ue1_0.id,
+        ue1_0.follower_count,
+        ue1_0.following_count,
+        ue1_0.mod_dt,
+        ue1_0.name,
+        ue1_0.profile_image,
+        ue1_0.reg_dt 
+    from
+        community_user ue1_0 
+    where
+        ue1_0.id=?
+Hibernate: ????. 이건 어디서 나온 쿼리문..? -> 영속성 컨텍스트에 PostEntity가 등록되어 있지 않아서 한번 더 수행..!
+    select
+        pe1_0.id,
+        pe1_0.author_id,
+        a1_0.id,
+        a1_0.follower_count,
+        a1_0.following_count,
+        a1_0.mod_dt,
+        a1_0.name,
+        a1_0.profile_image,
+        a1_0.reg_dt,
+        pe1_0.content,
+        pe1_0.like_count,
+        pe1_0.mod_dt,
+        pe1_0.reg_dt,
+        pe1_0.state 
+    from
+        community_post pe1_0 
+    left join
+        community_user a1_0 
+            on a1_0.id=pe1_0.author_id 
+    where
+        pe1_0.id=?
+Hibernate: 3. update문 실행
+    update
+        community_post 
+    set
+        author_id=?,
+        content=?,
+        like_count=?,
+        mod_dt=?,
+        state=? 
+    where
+        id=?
+
+--------------------------------------------------------------------------------------------------------------------
+
+update 하기 전에 select 문이 2번이 아님 3번이 나옴!
+영속성 컨텍스트에 PostEntity가 등록되어 있지 않아서 한번 더 수행..!
+Service layer(PostService)를 보면 get을 통해서 순수 엔티티(Post) 객체로 반환이 되고,
+getPost를 통해 얻은 Post 객체는 사실상 사용하고 있지 않은 상황임...
+-> findById를 통해 PostEntity를 그대로 사용해야지 영속성 컨텍스트로 등록이 되고,
+로직을 위해서 Post 객체를 추가해주는 바람에 지금 1번더 조회를 한 후에 영속성 컨텍스트에 등록이 됨
+
+아예 id가 없는 객체는 무조건 persist를 통해서 가지고 오지만(저장하지만),
+수정할 때 id가 존재할 때에는 insert를 할지 모르는 상황이니 무조건 select를 하게 됨
+이런 상황에서 불필요한 조회를 없애는 방법은 2가지임!
+1. RepositoryImpl과 Service 둘 다 수정
+- RepositoryImpl에서 @Transactional 추가하고, 비즈니스 로직을 여기 안에서 수행
+---> 이렇게 하려면 Post뿐만 아니라 postId, userId도 받아와야 함 -> 변경사항이 많아짐..ㅠㅠ
+
+2. update문을 JPQL 쿼리문으로 작성..!
+org.fastcampus.post.repository.jpa.JpaPostRepository 로 이동해서 작성!
+
+:#{# -> 객체 안에 있는 값들을 가져올 수 있는 JPQL 문법임..!
+
+JpaPostRepository에서 @Modifying와 PostRepositoryImpl에서 @Transactional이 추가되어야 변경을 사용할 수 있음..!
+-> 이렇게 하면 select를 2번하고 update문을 수행함!!
+
+--------------------------------------------------------------------------------------------------------------------
+org.fastcampus.post.repository.LikeRepositoryImpl
+- LikeEntity는 새로 생기거나 삭제하는 것 밖에 없음..!
+- LikeEntity는 LikeIdEntity에서 지정해준 3개의 변수(targetId, userId, targetType)로만 동작함
+- Spring Data JPA는 save로 동작할 경우 머지가 발생함?
+-> 항상 저장하기 전에 있는 지 조회하고 저장하는 일이 발생 ㅠㅠ
+---> 항상 insert문만 발생할 수 있도록 필드변수로 @PersistenceContext 추가!
+entityManager.persist(likeEntity);
+--> 이렇게 하면 불필요한 조회없이 저장됨!
+
+--------------------------------------------------------------------------------------------------------------------org.fastcampus.post.application.PostService 의 likePost 메서드
+1. 만약 Post 도메인에 객체를 저장했다고 하고 likePost 메서드에 @Transactional추가하면 2가지 문제가 생김
+- DB 로직을 수정하면 Service Layer에도 영향을 받음...!!
+(수업에선 DB 관련 작업을 해주면서 Service 와 Domain 쪽의 코드를 수정한 적이 없음!)
+--------------------------------------------------------------------------------------------------------------------
+
+유저3이 1번 포스트에  좋아요 누른 경우
+
+Hibernate: (★) 포스트 가져오기
+    select
+        pe1_0.id,
+        pe1_0.author_id,
+        a1_0.id,
+        a1_0.follower_count,
+        a1_0.following_count,
+        a1_0.mod_dt,
+        a1_0.name,
+        a1_0.profile_image,
+        a1_0.reg_dt,
+        pe1_0.content,
+        pe1_0.like_count,
+        pe1_0.mod_dt,
+        pe1_0.reg_dt,
+        pe1_0.state 
+    from
+        community_post pe1_0 
+    left join
+        community_user a1_0 
+            on a1_0.id=pe1_0.author_id 
+    where
+        pe1_0.id=?
+Hibernate: (★) 유저정보 가져오기
+    select
+        ue1_0.id,
+        ue1_0.follower_count,
+        ue1_0.following_count,
+        ue1_0.mod_dt,
+        ue1_0.name,
+        ue1_0.profile_image,
+        ue1_0.reg_dt 
+    from
+        community_user ue1_0 
+    where
+        ue1_0.id=?
+Hibernate: (★) 좋아요 눌렀는지 확인
+    select
+        count(*) 
+    from
+        community_like le1_0 
+    where
+        (
+            le1_0.target_id, le1_0.target_type, le1_0.user_id
+        )=(
+            ?, ?, ?
+        )
+Hibernate: (★) 좋아요 숫자 업데이트
+    update
+        community_post pe1_0 
+    set
+        like_count=?,
+        mod_dt=now() 
+    where
+        pe1_0.id=?
+Hibernate: (★) 좋아요 데이터 넣어주기
+    insert 
+    into
+        community_like
+        (mod_dt, reg_dt, target_id, target_type, user_id) 
+    values
+        (?, ?, ?, ?, ?)
+
+--------------------------------------------------------------------------------------------------------------------
+좋아요 취소 누르는 경우
+
+Hibernate: (★) 포스트 가져오기
+    select
+        pe1_0.id,
+        pe1_0.author_id,
+        a1_0.id,
+        a1_0.follower_count,
+        a1_0.following_count,
+        a1_0.mod_dt,
+        a1_0.name,
+        a1_0.profile_image,
+        a1_0.reg_dt,
+        pe1_0.content,
+        pe1_0.like_count,
+        pe1_0.mod_dt,
+        pe1_0.reg_dt,
+        pe1_0.state 
+    from
+        community_post pe1_0 
+    left join
+        community_user a1_0 
+            on a1_0.id=pe1_0.author_id 
+    where
+        pe1_0.id=?
+Hibernate: (★) 유저정보 가져오기
+    select
+        ue1_0.id,
+        ue1_0.follower_count,
+        ue1_0.following_count,
+        ue1_0.mod_dt,
+        ue1_0.name,
+        ue1_0.profile_image,
+        ue1_0.reg_dt 
+    from
+        community_user ue1_0 
+    where
+        ue1_0.id=?
+Hibernate: (★) 이미 좋아요 눌려있는지 확인
+    select
+        count(*) 
+    from
+        community_like le1_0 
+    where
+        (
+            le1_0.target_id, le1_0.target_type, le1_0.user_id
+        )=(
+            ?, ?, ?
+        )
+Hibernate: (★) 
+    select
+        le1_0.target_id,
+        le1_0.target_type,
+        le1_0.user_id,
+        le1_0.mod_dt,
+        le1_0.reg_dt 
+    from
+        community_like le1_0 
+    where
+        (
+            le1_0.target_id, le1_0.target_type, le1_0.user_id
+        ) in ((?, ?, ?))
+Hibernate: (★) 
+    update
+        community_post pe1_0 
+    set
+        like_count=?,
+        mod_dt=now() 
+    where
+        pe1_0.id=?
+Hibernate: 
+    delete 
+    from
+        community_like 
+    where
+        target_id=? 
+        and target_type=? 
+        and user_id=?

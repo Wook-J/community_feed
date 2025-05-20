@@ -2,12 +2,15 @@ package org.fastcampus.post.application;
 
 import org.fastcampus.post.application.dto.CreatePostRequestDto;
 import org.fastcampus.post.application.dto.LikeRequestDto;
+import org.fastcampus.post.application.dto.UpdatePostRequestDto;
 import org.fastcampus.post.application.interfaces.LikeRepository;
 import org.fastcampus.post.application.interfaces.PostRepository;
 import org.fastcampus.post.domain.Post;
 import org.fastcampus.user.application.UserService;
 import org.fastcampus.user.domain.User;
+import org.springframework.stereotype.Service;
 
+@Service
 public class PostService {
 
     private final UserService userService;
@@ -22,7 +25,7 @@ public class PostService {
     }
 
     public Post getPost(Long id) {
-        return postRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("No post found with id: " + id));
+        return postRepository.findById(id);
     }
 
     public Post createPost(CreatePostRequestDto dto){
@@ -37,8 +40,8 @@ public class PostService {
         // 현재 도메인에 dto를 의존시키지 않음
     }
 
-    public Post updatePost(Long id, CreatePostRequestDto dto){
-        Post post = getPost(id);
+    public Post updatePost(Long postId, UpdatePostRequestDto dto){
+        Post post = getPost(postId);
         User user = userService.getUser(dto.userId());
 
         post.updatePost(user, dto.content(), dto.state());
@@ -57,7 +60,7 @@ public class PostService {
         likeRepository.like(post, user);
     }
 
-    public void unLikePost(LikeRequestDto dto) {
+    public void unlikePost(LikeRequestDto dto) {
         Post post = getPost(dto.targetId());
         User user = userService.getUser(dto.userId());
 
