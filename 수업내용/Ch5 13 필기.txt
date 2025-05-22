@@ -1,0 +1,53 @@
+스레드 풀을 통해 DB는 동시에 오는 여러 작업을 동시에 처리할 수 있음
+
+동시에 좋아요 요청이 같이 오면 어떻게 처리?
+업데이트 로스트, 즉 갱신유실 현상이 생길 수 있음....!
+commentCount에서도 시도해 봄...!
+
+CommentRepositoryImpl 클래스 내 jpaPostRepository.increaseCommentCount(targetPost.getId());
+
+JpaPostRepository 인터페이스 내 코드
+
+    @Modifying
+    @Query(value = "UPDATE PostEntity p "
+        + "SET p.commentCount = p.commentCount + 1, "
+        + "p.modDt = now() "
+        + "WHERE p.id = :id")
+    void increaseCommentCount(Long id);
+
+
+MySQL 의 lock???
+
+unique한 대상의 insert나 update를 위해 low 한개의 data에 lock을 걸어줌
+(여기선 게시글 1번이라는 unique한 대상이 있음)
+-> 동시에 요청이 들어온다고 한다면 먼저 들어온 update문을 처리하는 동안 다른 update문은 데이터 접근못하고 대기걸림
+
+다른 해결 방법으로는 DB의 Isolation level을 serialize로 올리거나 락관락, 비관락을 사용하는 방법이 있음
+
+이렇게 동시성 처리같이 DB에서밖에 처리할 수 없는 일들을 이렇게 DB에서 처리하는 것이 좋다고 생각한대!
+
+좋아요나 댓글 수를 올려주는 것들은 이렇게 repository를 이용해 따로 update쿼리문을 이용해 처리하는 것이 적합!
+
+-> 그렇다면 기존에 만들었던 like를 수정하려면 어떻게?
+
+LikeRepositoryImpl, JpaPostRepository, JpaCommentRepository 수정에서 갱신유실은 해결함!
+
+
+같은 유저가 같은 게시글에 좋아요 요청을 하는경우? -> 미리 맞춰놨음!!
+- EntituyManager.persist() !!!
+
+
+지금까지처럼 쿼리를 직접 작성하는 방식의 단점은??
+- 기존의 객체로 만든것보다 덜 유연하고, 테스트를 위해서 외부 라이브러리를 사용해야 함...!
+
+ex 쿠폰
+- 쿠폰이 유효한지 -> Java 객체에 넣고 domain 로직으로 처리하는게 좋아보임
+  -> 쿠폰의 유효성에 대한 검증은 비즈니스 목적에 따라 사용에 비해 좀 더 변할 확률이 높음!
+- 쿠폰이 이미 사용되었는지 -> 쉽게 변하지 않고, 가장 중요한건 2번 처리되지 않게 하는 것임!!
+
+
+
+
+
+
+
