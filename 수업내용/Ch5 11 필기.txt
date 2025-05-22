@@ -1,0 +1,69 @@
+커뮤니트 피드 유즈 케이스 중 4. 피드보기, 5. 댓글리스트 관련 문제
+- 게시글에 대한 댓글의 개수를 저장하고 있지 않음
+- 내가 팔로우한 사람들의 글을 전부 불러온 뒤에 시간순으로 정렬해야 함..!
+------------------------------------------------------------------------------------------------------
+게시글에 대한 댓글 갯수 추가!
+- 비즈니스 로직/ 도메인으로 빠져야 할까??
+- 레파지토리의 엔티티에서만 확인이 필요할까??
+
+-> Post에서는 like를 통해서 domain 레이어에서 좋아요수를 1개씩 올리고 있음
+-> 이번에는 domain 로직으로 따로 넣지 않고, commentCount를 넣어서 Entity로만 구현하는 방법 선택!
+
+PostEntity.java
+private int commentCount;
+-> DB에서 관리되는 값이기 때문에 우선 래퍼 클래스가 아닌 primitive 타입으로 작성!
+
+어떤 건 엔티티에만 넣고, 어떤 건 도메인에 넣는 것이 좋을까??
+
+------------------------------------------------------------------------------------------------------
+테이블에 유저별로 게시글 리스트 만들기!
+USER_ID / POST_ID / AUTHOR_ID
+
+ex)
+- 유저 1이 유저 2, 3을 팔로우
+- 유저 2가 글쓰기(post id = 1)		-> 1 / 1 / 2
+- 유저 3이 글쓰기(post id = 2)		-> 1 / 2 / 3
+- 유저 1이 글쓰기(post id = 3)
+
+------------------------------------------------------------------------------------------------------
+UserPostQueue에 data를 넣어 주는 Command Repository
+조회를 위한 쿼리 Repository를 따로 나눠서 interface 구현
+
+UserPostQueueCommandRepository
+- 글을 작성하고 feed queue에 data를 넣어주는 메서드
+- 팔로우/언팔로우 할 때 UserPostQueue에 데이터를 넣어주는/삭제하는 메서드
+void publishPost(PostEntity postEntity);
+- 글을 만들었을 때 나를 팔로우하는 유저들에게 글 번호를 넣어주는 메서드
+void saveFollowPost(Long userId, Long targetId);
+- 내가 팔로우했을 때 팔로우한 사람들의 글을 내 피드에 넣어주는 메서드
+void deleteUnfollowPost(Long userId, Long targetId);
+- 내가 언팔로우했을 때 팔로우했던 사람들의 글을 내 피드에서 삭제하는 메서드
+
+UserPostQueueCommandRepository를 repository 패키지 하위에 넣은 이유
+- Service Layer에서 노출이 되면 안되는 repository이기 때문!
+
+Service Layer의 특징
+- 레파지토리, 도메인, 컨트롤러에서 오는 데이터를 전달하고 가공하는 중간다리 역할
+
+트랜젝션 보장의 경우 레파지토리에서 하기로 정함!
+
+트랜젝션이 보장이 안되서 결국 유저가 글을 작성했을 때 나를 팔로우 중인 유저에게 피드가 정상적으로 노출되지 않는다면 기능에 문제가 생김....!
+-> 트랜젝션을 담당하는 레파지토리에서 직접 주입하고 해결하는 것이 좋아보임!
+
+public void publishPost(PostEntity postEntity)
+나를 팔로우 하는 유저들의 정보 필요 -> JpaUserRelationRepository에서  메서드 추가
+List<Long> findFollowers(Long userId) : 나를 팔로우하는 user의 Id 조회
+
+JpaUserPostQueueRepository 에서 
+deleteAllByUserIdAndAuthorId(Long userId, Long authorId); 
+만 적어도 jpa Query 메서드에서 자동으로 쿼리문을 작성해줌!!
+
+------------------------------------------------------------------------------------------------------
+
+post.ui 내에 FeedController생성
++ dto 패키지 생성 : 댓글리스트, 피드리스트 가져와야 함(+ 댓글수 여부만 로직이 다를듯?)
+-> 레코드 외에 클래스 상속으로 롬복을 가져오면 좀 더 편함!
+(public class GetPostContentResponseDto extends GetContentResponseDto)
+
+저장한 UserPostQueue 중심으로 데이터를 불러오면 좋겠음!
+post.appication 패키지 내에 dto가 있는데, post.ui 패키지 내에 dto를 왜 또 만들었을까??
