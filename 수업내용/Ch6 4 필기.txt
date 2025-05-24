@@ -1,0 +1,4 @@
+현재 모든 인수테스트를 만들기보다는 당장 리팩토링에 필요한 부분들을 먼저 테스트
+
+public class FeedAcceptanceTest extends AcceptanceTestTemplate
+(코드 작성 전에 시나리오 주석 작성!)
