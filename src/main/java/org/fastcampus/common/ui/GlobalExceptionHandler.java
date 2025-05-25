@@ -17,6 +17,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public Response<Void> handleException(Exception exception) {
         log.error(exception.getMessage());
-        return Response.error(ErrorCode.INVALID_INPUT_VALUE);
+        return Response.error(ErrorCode.INTERNAL_ERROR);
     }
 }

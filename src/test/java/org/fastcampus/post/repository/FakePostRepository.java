@@ -26,4 +26,9 @@ public class FakePostRepository implements PostRepository {
     public Post findById(Long id) {
         return store.get(id);
     }
+
+    @Override
+    public Post publish(Post post) {
+        return save(post);
+    }
 }

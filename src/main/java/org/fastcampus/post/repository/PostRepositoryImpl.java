@@ -34,4 +34,11 @@ public class PostRepositoryImpl implements PostRepository {
         PostEntity postEntity = jpaPostRepository.findById(id).orElseThrow();
         return postEntity.toPost();
     }
+
+    @Override
+    public Post publish(Post post) {
+        PostEntity postEntity = jpaPostRepository.save(new PostEntity(post));
+        commandRepository.publishPost(postEntity);
+        return postEntity.toPost();
+    }
 }
