@@ -1,0 +1,75 @@
+현재 FeedAcceptanceTest의 givenUserHasFollowerAndCreatePost_whenFollowerRequestFeed_thenFollowerCanGetPostFromFeed
+제대로 작동안함...
+
+기존에 만든 user post_queue 같은 경우 문제가 있음!
+org.fastcampus.post.repository.post_queue.UserPostQueueCommandRepositoryImpl
+- 유저가 많아졌을 때의 대응이 제대로 안됨...
+- 레디스나 캐싱 큐를 이용해서 만들기로 함!
+
+--> 이번 리팩토링에서는 실제 레디스 세팅을 하거나 레디스 쿼리문을 구현하지는 않고(...?)
+--> 마찬가지로 테스트 더블 큐만 이용해서 원하는 대로 동작하는 지 확인할 것임..!
+
+인터페이스를 만들어 놓으면 마찬가지로 나중에 레디스를 도입한 뒤에 구현체만 구현해주면 됨..!
+
+
+철저하게 비즈니스로직과 DB로직을 분리시켜 놓았기 때문에 레파지토리만 수정하면됨!
+UserPostQueueCommandRepositoryImpl 클래스 내
+멤버변수 JpaUserPostQueueRepository 를 새로운 레디스 인터페이스로만 변경
+
+org.fastcampus.post.repository.post_queue 패키지 내 UserQueueRedisRepository 생성
+
+private final UserQueueRedisRepository redisRepository; <- 어플리케이션에서 빨간 줄 나옴
+- 구현체를 만들어주지 않았기 때문..!
+
+일단은 임시로 인터페이스만 넣어놓기로..!
+나중에 redis가 도입됐을 때 구현체를 만들어주고, 스프링에 그 컴포넌트를 등록하면됨!
+
+우선 인수테스트를 중심으로 봐야하므로,
+이걸 구현한 인수테스트에서 사용하는 레파지토리 테스트 더블을 수행해볼 거임
+
+UserPostQueueCommandRepositoryImpl에 들어가는 UserQueueRedisRepository의 구현체를 test 패키지에서 만들기!
+
+org.fastcampus.post.repository.FakeUserQueueRedisRepository
+여기에서 프로파일 지정도 필요!
+
+
+이렇게 우리가 레파지토리로 바꾸면서 기존에 사용하던 post_queue Entity를 더이상 사용하지 않게 되었음
+그런데 지금 (org.fastcampus.post.ui 패키지 내) FeedController를 보면
+private final UserPostQueueQueryRepository queueQueryRepository; 를 사용하고 있음
+
+org.fastcampus.post.repository.post_queue 패키지 내 UserPostQueueQueryRepositoryImpl 삭제 
+(같은 경로로 이동 -> redis repository를 활용한 새로운 파일만들기 위해..!)
+
+FeedController 에서 UserPostQueueQueryRepository는 적절한 구현체가 없음...!
+
+-------------------------------------------------------------------------------------------------------
+실제 DB를 이용을 하고 외부 API를 이용하는 것과 위의 처럼 페이크 객체를 만드는 것 중 어떻게 테스트를 해야 할까?
+
+- DB와 redis도 docker를 이용해서 이미지를 같이 배포하고 외부의 API도 연동을 한다면 프로덕션 레벨에서 정말
+  정확하게 동작하는 것을 보장받을 수 있음!
+- 만약 배포하는 단계에서 테스트를 진행하고 통과를 한 뒤에만 배포가 되는 프로세스를 따로 만들어뒀다면
+  이런 외부 API가 갑자기 네트워크 이슈로 동작을 하지 않는 순간 배포가 되지 않는 문제가 발생함...
+- 또는 로컬에서 외부API가 연결이 되지 않거나 방화벽에 의해 막히는 일이 발생할 수 있음
+-> 이렇게 되면 테스트가 실패하거나 일정하게 동작하지 않고 유지보수하기가 더 어려워짐
+-> 이런 DB 같은 경우 최대한 비슷한 RDBMS를 사용하거나 도커를 통해서 환경을 구성하고
+     MSA 환경에서 이런 외부 API에 대한 요청들은 페이크를 사용해서 둘다 적절히 조합을 해서
+     인수테스트를 작성하는 것을 추천함...!
+
+- 이렇게 만들 수 있는 것은 최대한 만들어 주고 아닌 것들은 테스트 객체, 테스트 더블로 만들어서 최대한 테스트의
+  일관성과 테스트 코드의 유지보수를 좀더 쉽게 만드는 것에 집중!
+
+-------------------------------------------------------------------------------------------------------
+파트1 종료!!!
+
+기존의 서비스 레이어와 도메인 레이어의 객체들을 변경하지 않고도 이렇게 리팩토링을 진행하였음!!
+
+객체지향, 클린 아키텍처, 단위 테스트와 인수테스트를 통해 안정적이고 변경이 일어날 때에 대한 대처를
+종합적으로 한번 경험해봄!
+
+- 이렇게 객체를 역할단위로 작게 나누면서 단위테스트가 쉽게 작성됨!
+- 저수준 컴포넌트가 고수준 컴포넌트를 의존하지 않게 함으로써 리팩토링이 진행될 때에도 기존의 단위 테스트와
+  기존의 비즈니스 로직에는 영향도가 없도록 만들어봄!
+- 기본적으로 스프링과 JPA, 그리고 MySQL에 대해서도 배우고 실습을 통해 관련내용 학습!
+
+관성적으로 개발하는 시간보다 기본기를 튼튼하게 다지고 생각하는 시간을 가져봄..!
+

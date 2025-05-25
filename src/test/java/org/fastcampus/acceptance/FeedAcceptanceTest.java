@@ -25,6 +25,7 @@ class FeedAcceptanceTest extends AcceptanceTestTemplate {
     /**
      * User 2 create Post 1
      * User 1 Get Post 1 From Feed
+     * -> 현재 User2의 Post(1)가 User1한테 피드되고 있지 않음
      */
     @Test
     void givenUserHasFollowerAndCreatePost_whenFollowerRequestFeed_thenFollowerCanGetPostFromFeed() {
